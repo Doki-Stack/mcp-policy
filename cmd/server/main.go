@@ -3,35 +3,64 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/doki-stack/mcp-policy/internal/config"
 	"github.com/doki-stack/shared-go/health"
+	sharedlog "github.com/doki-stack/shared-go/logger"
+	sharedmw "github.com/doki-stack/shared-go/middleware"
+	"github.com/doki-stack/shared-go/otel"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
+	"go.uber.org/zap"
 )
 
 func main() {
 	if err := run(); err != nil {
-		log.Fatal(err)
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 }
 
 func run() error {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	cfg, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("load config: %w", err)
 	}
 
+	log, err := sharedlog.New("mcp-policy",
+		sharedlog.WithLevel(cfg.LogLevel),
+		sharedlog.WithDevelopment(cfg.Environment == "development"),
+	)
+	if err != nil {
+		return fmt.Errorf("init logger: %w", err)
+	}
+	defer log.Sync() //nolint:errcheck
+
+	ctx := context.Background()
+	shutdownOTel, err := otel.Init(ctx, "mcp-policy",
+		otel.WithExporterEndpoint(cfg.OTelExporterEndpoint),
+		otel.WithEnvironment(cfg.Environment),
+	)
+	if err != nil {
+		return fmt.Errorf("init otel: %w", err)
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = shutdownOTel(shutdownCtx)
+	}()
+
 	r := chi.NewRouter()
-	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
-	r.Use(chimw.Logger)
-	r.Use(chimw.Recoverer)
+	r.Use(sharedmw.RequestID)
+	r.Use(sharedmw.Recovery(log))
+	r.Use(sharedmw.Logger(log))
 
 	// Mounts GET /healthz (liveness) and GET /readyz (readiness). No dependency
 	// checks are registered yet — those are added as PG/Qdrant/embedding clients
@@ -39,14 +68,14 @@ func run() error {
 	r.Mount("/", health.Handler())
 
 	srv := &http.Server{
-		Addr:              ":" + port,
+		Addr:              fmt.Sprintf(":%d", cfg.Port),
 		Handler:           r,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	errCh := make(chan error, 1)
 	go func() {
-		log.Printf("mcp-policy listening on :%s", port)
+		log.Info("mcp-policy listening", zap.Int("port", cfg.Port))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			errCh <- err
 		}
@@ -61,7 +90,8 @@ func run() error {
 	case <-stop:
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	log.Info("shutting down")
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	return srv.Shutdown(ctx)
+	return srv.Shutdown(shutdownCtx)
 }
