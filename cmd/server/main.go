@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/doki-stack/mcp-policy/internal/config"
+	"github.com/doki-stack/mcp-policy/internal/repository"
 	"github.com/doki-stack/shared-go/health"
 	sharedlog "github.com/doki-stack/shared-go/logger"
 	sharedmw "github.com/doki-stack/shared-go/middleware"
@@ -56,16 +57,23 @@ func run() error {
 		_ = shutdownOTel(shutdownCtx)
 	}()
 
+	store, err := repository.NewStore(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return fmt.Errorf("connect postgres: %w", err)
+	}
+	defer store.Close()
+
 	r := chi.NewRouter()
 	r.Use(chimw.RealIP)
 	r.Use(sharedmw.RequestID)
 	r.Use(sharedmw.Recovery(log))
 	r.Use(sharedmw.Logger(log))
 
-	// Mounts GET /healthz (liveness) and GET /readyz (readiness). No dependency
-	// checks are registered yet — those are added as PG/Qdrant/embedding clients
-	// land in later tasks.
-	r.Mount("/", health.Handler())
+	// Mounts GET /healthz (liveness) and GET /readyz (readiness). More checks
+	// (Qdrant, embeddings) are added as those clients land in later tasks.
+	r.Mount("/", health.Handler(
+		health.NewCheck("postgres", store.Ping),
+	))
 
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.Port),
