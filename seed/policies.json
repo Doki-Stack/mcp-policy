@@ -1,0 +1,69 @@
+[
+  {
+    "org_id": "a0000000-0000-0000-0000-000000000001",
+    "policy_id": "c0000000-0000-0000-0000-000000000001",
+    "title": "no-oversized-prod-ec2",
+    "text": "EC2 instances in the production environment must not exceed 8 vCPUs / 32GB RAM without platform_owner approval, to control cost and blast radius.",
+    "effective_date": "2026-01-15T00:00:00Z"
+  },
+  {
+    "org_id": "a0000000-0000-0000-0000-000000000001",
+    "policy_id": "c0000000-0000-0000-0000-000000000002",
+    "title": "right-sized-dev-instances",
+    "text": "Development and staging EC2 instances must use burstable instance families (t3, t4g), not compute-optimized or memory-optimized families, to control non-production spend.",
+    "effective_date": "2026-01-15T00:00:00Z"
+  },
+  {
+    "org_id": "a0000000-0000-0000-0000-000000000001",
+    "policy_id": "c0000000-0000-0000-0000-000000000003",
+    "title": "encrypt-at-rest",
+    "text": "All EBS volumes, RDS instances, and S3 buckets must have encryption at rest enabled using AWS KMS-managed keys.",
+    "compliance_framework": "SOC2",
+    "effective_date": "2026-01-15T00:00:00Z"
+  },
+  {
+    "org_id": "a0000000-0000-0000-0000-000000000001",
+    "policy_id": "c0000000-0000-0000-0000-000000000004",
+    "title": "encrypt-in-transit",
+    "text": "All load balancers and API gateways must enforce TLS 1.2 or higher. Plaintext HTTP listeners are prohibited except for health check endpoints.",
+    "compliance_framework": "SOC2",
+    "effective_date": "2026-01-15T00:00:00Z"
+  },
+  {
+    "org_id": "a0000000-0000-0000-0000-000000000001",
+    "policy_id": "c0000000-0000-0000-0000-000000000005",
+    "title": "no-public-s3",
+    "text": "S3 buckets must not have public read or write ACLs, and public bucket policies are prohibited except for buckets explicitly tagged public-content=true.",
+    "compliance_framework": "SOC2",
+    "effective_date": "2026-01-15T00:00:00Z"
+  },
+  {
+    "org_id": "a0000000-0000-0000-0000-000000000001",
+    "policy_id": "c0000000-0000-0000-0000-000000000006",
+    "title": "restrict-ssh-rdp-cidr",
+    "text": "Security groups must not allow inbound SSH (port 22) or RDP (port 3389) from 0.0.0.0/0. Access must be restricted to the corporate VPN CIDR range.",
+    "compliance_framework": "SOC2",
+    "effective_date": "2026-01-15T00:00:00Z"
+  },
+  {
+    "org_id": "a0000000-0000-0000-0000-000000000001",
+    "policy_id": "c0000000-0000-0000-0000-000000000007",
+    "title": "elevated-approval-cost-threshold",
+    "text": "Any single Terraform apply estimated to add more than $500/month in recurring cost requires sign-off from a user with the approver role, not just operator.",
+    "effective_date": "2026-01-15T00:00:00Z"
+  },
+  {
+    "org_id": "a0000000-0000-0000-0000-000000000001",
+    "policy_id": "c0000000-0000-0000-0000-000000000008",
+    "title": "resource-naming-convention",
+    "text": "All cloud resources must be named using the pattern {org_slug}-{environment}-{resource_type}-{purpose}, lowercase, hyphen-separated, with no consecutive hyphens.",
+    "effective_date": "2026-01-15T00:00:00Z"
+  },
+  {
+    "org_id": "a0000000-0000-0000-0000-000000000001",
+    "policy_id": "c0000000-0000-0000-0000-000000000009",
+    "title": "production-deployment-window",
+    "text": "Production infrastructure changes are only permitted Monday through Thursday, 09:00-16:00 org-local time, except for emergency rollback operations approved by an on-call platform_owner.",
+    "effective_date": "2026-01-15T00:00:00Z"
+  }
+]
