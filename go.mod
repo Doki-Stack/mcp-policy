@@ -9,6 +9,7 @@ require (
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/qdrant/go-client v1.19.2
 	github.com/redis/go-redis/v9 v9.22.0
+	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/sony/gobreaker/v2 v2.4.0
 	go.uber.org/zap v1.27.0
 )
