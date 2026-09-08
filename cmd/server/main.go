@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/doki-stack/mcp-policy/internal/config"
+	"github.com/doki-stack/mcp-policy/internal/handler"
 	"github.com/doki-stack/mcp-policy/internal/repository"
+	"github.com/doki-stack/mcp-policy/internal/service"
 	"github.com/doki-stack/shared-go/health"
 	sharedlog "github.com/doki-stack/shared-go/logger"
 	sharedmw "github.com/doki-stack/shared-go/middleware"
@@ -78,6 +80,16 @@ func run() error {
 		return fmt.Errorf("ensure qdrant collection: %w", err)
 	}
 
+	cache, err := repository.NewCacheRepo(cfg.DragonflyURL)
+	if err != nil {
+		return fmt.Errorf("configure cache: %w", err)
+	}
+	defer cache.Close() //nolint:errcheck
+
+	embedder := service.NewEmbeddingService(cfg.OllamaBaseURL, cfg.EmbeddingModel, cfg.EmbeddingTimeout())
+	engine := service.NewPolicyEngine(embedder, qdrantRepo, cache)
+	policyHandler := handler.NewPolicyHandler(engine, log)
+
 	r := chi.NewRouter()
 	r.Use(chimw.RealIP)
 	r.Use(sharedmw.RequestID)
@@ -91,6 +103,8 @@ func run() error {
 		health.NewCheck("postgres", store.Ping),
 		health.NewCheck("qdrant", qdrantRepo.Ping),
 	))
+
+	r.Post("/mcp/v1/tools/evaluate-policy", policyHandler.EvaluatePolicy)
 
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.Port),
