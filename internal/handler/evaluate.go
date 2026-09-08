@@ -15,21 +15,22 @@ import (
 	"go.uber.org/zap"
 )
 
-// Evaluator is the narrow slice of *service.PolicyEngine this handler
-// needs. Defined here (not in service) so tests can inject a fake without
+// Engine is the slice of *service.PolicyEngine this handler needs.
+// Defined here (not in service) so tests can inject a fake without
 // standing up a live Qdrant/Ollama.
-type Evaluator interface {
+type Engine interface {
 	Evaluate(ctx context.Context, req model.EvaluateRequest) (*model.EvaluateResponse, error)
+	IngestPolicies(ctx context.Context, docs []model.IngestPolicyRequest) ([]service.IngestResult, error)
 }
 
 // PolicyHandler serves the Policy MCP's tool endpoints.
 type PolicyHandler struct {
-	engine Evaluator
+	engine Engine
 	log    *logger.Logger
 }
 
 // NewPolicyHandler wires a PolicyHandler to its service layer and logger.
-func NewPolicyHandler(engine Evaluator, log *logger.Logger) *PolicyHandler {
+func NewPolicyHandler(engine Engine, log *logger.Logger) *PolicyHandler {
 	return &PolicyHandler{engine: engine, log: log}
 }
 

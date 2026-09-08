@@ -105,6 +105,7 @@ func run() error {
 	))
 
 	r.Post("/mcp/v1/tools/evaluate-policy", policyHandler.EvaluatePolicy)
+	r.Post("/mcp/v1/tools/ingest-policy", policyHandler.IngestPolicy)
 
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.Port),

@@ -14,15 +14,22 @@ import (
 	"github.com/doki-stack/shared-go/logger"
 )
 
-// fakeEvaluator lets handler tests exercise every response path without a
+// fakeEngine lets handler tests exercise every response path without a
 // live Qdrant/Ollama behind PolicyEngine.
-type fakeEvaluator struct {
+type fakeEngine struct {
 	resp *model.EvaluateResponse
 	err  error
+
+	ingestResults []service.IngestResult
+	ingestErr     error
 }
 
-func (f *fakeEvaluator) Evaluate(ctx context.Context, req model.EvaluateRequest) (*model.EvaluateResponse, error) {
+func (f *fakeEngine) Evaluate(ctx context.Context, req model.EvaluateRequest) (*model.EvaluateResponse, error) {
 	return f.resp, f.err
+}
+
+func (f *fakeEngine) IngestPolicies(ctx context.Context, docs []model.IngestPolicyRequest) ([]service.IngestResult, error) {
+	return f.ingestResults, f.ingestErr
 }
 
 func testLogger(t *testing.T) *logger.Logger {
@@ -52,7 +59,7 @@ func TestEvaluatePolicy_Success(t *testing.T) {
 		Constraints: []string{"no-public-s3: ..."},
 		Violations:  []model.Violation{},
 	}
-	h := NewPolicyHandler(&fakeEvaluator{resp: want}, testLogger(t))
+	h := NewPolicyHandler(&fakeEngine{resp: want}, testLogger(t))
 
 	rec := doEvaluate(t, h, model.EvaluateRequest{
 		OrgID: "11111111-1111-1111-1111-111111111111",
@@ -72,7 +79,7 @@ func TestEvaluatePolicy_Success(t *testing.T) {
 }
 
 func TestEvaluatePolicy_FailClosed(t *testing.T) {
-	h := NewPolicyHandler(&fakeEvaluator{err: fmt.Errorf("%w: qdrant down", service.ErrFailClosed)}, testLogger(t))
+	h := NewPolicyHandler(&fakeEngine{err: fmt.Errorf("%w: qdrant down", service.ErrFailClosed)}, testLogger(t))
 
 	rec := doEvaluate(t, h, model.EvaluateRequest{
 		OrgID: "11111111-1111-1111-1111-111111111111",
@@ -95,7 +102,7 @@ func TestEvaluatePolicy_FailClosed(t *testing.T) {
 }
 
 func TestEvaluatePolicy_InternalError(t *testing.T) {
-	h := NewPolicyHandler(&fakeEvaluator{err: fmt.Errorf("unexpected panic in re-ranker")}, testLogger(t))
+	h := NewPolicyHandler(&fakeEngine{err: fmt.Errorf("unexpected panic in re-ranker")}, testLogger(t))
 
 	rec := doEvaluate(t, h, model.EvaluateRequest{
 		OrgID: "11111111-1111-1111-1111-111111111111",
@@ -108,7 +115,7 @@ func TestEvaluatePolicy_InternalError(t *testing.T) {
 }
 
 func TestEvaluatePolicy_MissingOrgID(t *testing.T) {
-	h := NewPolicyHandler(&fakeEvaluator{}, testLogger(t))
+	h := NewPolicyHandler(&fakeEngine{}, testLogger(t))
 
 	rec := doEvaluate(t, h, model.EvaluateRequest{Query: "query"})
 
@@ -118,7 +125,7 @@ func TestEvaluatePolicy_MissingOrgID(t *testing.T) {
 }
 
 func TestEvaluatePolicy_MissingQuery(t *testing.T) {
-	h := NewPolicyHandler(&fakeEvaluator{}, testLogger(t))
+	h := NewPolicyHandler(&fakeEngine{}, testLogger(t))
 
 	rec := doEvaluate(t, h, model.EvaluateRequest{OrgID: "11111111-1111-1111-1111-111111111111"})
 
@@ -128,7 +135,7 @@ func TestEvaluatePolicy_MissingQuery(t *testing.T) {
 }
 
 func TestEvaluatePolicy_MalformedJSON(t *testing.T) {
-	h := NewPolicyHandler(&fakeEvaluator{}, testLogger(t))
+	h := NewPolicyHandler(&fakeEngine{}, testLogger(t))
 
 	req := httptest.NewRequest(http.MethodPost, "/mcp/v1/tools/evaluate-policy", bytes.NewReader([]byte("{not json")))
 	rec := httptest.NewRecorder()
