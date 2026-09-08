@@ -97,12 +97,13 @@ func run() error {
 	r.Use(sharedmw.Recovery(log))
 	r.Use(sharedmw.Logger(log))
 
-	// Mounts GET /healthz (liveness) and GET /readyz (readiness). Both
+	// Mounts GET /healthz (liveness) and GET /readyz (readiness). All three
 	// dependencies are fail-closed (ADR-005): readyz reports unhealthy if
-	// either is down, since evaluate-policy cannot function without them.
+	// any is down, since evaluate-policy cannot function without them.
 	r.Mount("/", health.Handler(
 		health.NewCheck("postgres", store.Ping),
 		health.NewCheck("qdrant", qdrantRepo.Ping),
+		health.HTTPCheck("ollama", cfg.OllamaBaseURL+"/api/tags"),
 	))
 
 	r.Post("/mcp/v1/tools/evaluate-policy", policyHandler.EvaluatePolicy)
