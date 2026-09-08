@@ -28,7 +28,7 @@ const oneDocJSON = `{
 
 func TestIngestPolicy_SingleObject(t *testing.T) {
 	fake := &fakeEngine{ingestResults: []service.IngestResult{{PolicyID: "22222222-2222-2222-2222-222222222222"}}}
-	h := NewPolicyHandler(fake, testLogger(t))
+	h := NewPolicyHandler(fake, fake, testLogger(t))
 
 	rec := doIngest(t, h, oneDocJSON)
 
@@ -49,7 +49,7 @@ func TestIngestPolicy_BatchArray(t *testing.T) {
 		{PolicyID: "a"},
 		{PolicyID: "b", Error: errors.New("boom")},
 	}}
-	h := NewPolicyHandler(fake, testLogger(t))
+	h := NewPolicyHandler(fake, fake, testLogger(t))
 
 	rec := doIngest(t, h, "["+oneDocJSON+","+oneDocJSON+"]")
 
@@ -72,7 +72,7 @@ func TestIngestPolicy_BatchArray(t *testing.T) {
 }
 
 func TestIngestPolicy_EmptyArray(t *testing.T) {
-	h := NewPolicyHandler(&fakeEngine{}, testLogger(t))
+	h := NewPolicyHandler(&fakeEngine{}, &fakeEngine{}, testLogger(t))
 
 	rec := doIngest(t, h, "[]")
 
@@ -82,7 +82,7 @@ func TestIngestPolicy_EmptyArray(t *testing.T) {
 }
 
 func TestIngestPolicy_MalformedJSON(t *testing.T) {
-	h := NewPolicyHandler(&fakeEngine{}, testLogger(t))
+	h := NewPolicyHandler(&fakeEngine{}, &fakeEngine{}, testLogger(t))
 
 	rec := doIngest(t, h, "{not json")
 
@@ -93,7 +93,7 @@ func TestIngestPolicy_MalformedJSON(t *testing.T) {
 
 func TestIngestPolicy_BatchTooLarge(t *testing.T) {
 	fake := &fakeEngine{ingestErr: service.ErrBatchTooLarge}
-	h := NewPolicyHandler(fake, testLogger(t))
+	h := NewPolicyHandler(fake, fake, testLogger(t))
 
 	rec := doIngest(t, h, oneDocJSON)
 
@@ -111,7 +111,7 @@ func TestIngestPolicy_BatchTooLarge(t *testing.T) {
 
 func TestIngestPolicy_InternalError(t *testing.T) {
 	fake := &fakeEngine{ingestErr: errors.New("qdrant exploded")}
-	h := NewPolicyHandler(fake, testLogger(t))
+	h := NewPolicyHandler(fake, fake, testLogger(t))
 
 	rec := doIngest(t, h, oneDocJSON)
 

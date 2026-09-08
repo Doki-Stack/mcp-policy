@@ -24,15 +24,21 @@ type Engine interface {
 	GetPolicies(ctx context.Context, req model.GetPoliciesRequest) ([]model.PolicyMatch, error)
 }
 
+// CostEngine is the slice of *service.CostChecker this handler needs.
+type CostEngine interface {
+	CheckCost(ctx context.Context, req model.CostCheckRequest) (*model.CostCheckResponse, error)
+}
+
 // PolicyHandler serves the Policy MCP's tool endpoints.
 type PolicyHandler struct {
-	engine Engine
-	log    *logger.Logger
+	engine     Engine
+	costEngine CostEngine
+	log        *logger.Logger
 }
 
 // NewPolicyHandler wires a PolicyHandler to its service layer and logger.
-func NewPolicyHandler(engine Engine, log *logger.Logger) *PolicyHandler {
-	return &PolicyHandler{engine: engine, log: log}
+func NewPolicyHandler(engine Engine, costEngine CostEngine, log *logger.Logger) *PolicyHandler {
+	return &PolicyHandler{engine: engine, costEngine: costEngine, log: log}
 }
 
 // EvaluatePolicy handles POST /mcp/v1/tools/evaluate-policy.

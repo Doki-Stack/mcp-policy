@@ -88,7 +88,8 @@ func run() error {
 
 	embedder := service.NewEmbeddingService(cfg.OllamaBaseURL, cfg.EmbeddingModel, cfg.EmbeddingTimeout())
 	engine := service.NewPolicyEngine(embedder, qdrantRepo, cache)
-	policyHandler := handler.NewPolicyHandler(engine, log)
+	costChecker := service.NewCostChecker(store)
+	policyHandler := handler.NewPolicyHandler(engine, costChecker, log)
 
 	r := chi.NewRouter()
 	r.Use(chimw.RealIP)
@@ -106,6 +107,8 @@ func run() error {
 
 	r.Post("/mcp/v1/tools/evaluate-policy", policyHandler.EvaluatePolicy)
 	r.Post("/mcp/v1/tools/ingest-policy", policyHandler.IngestPolicy)
+	r.Post("/mcp/v1/tools/get-policies", policyHandler.GetPolicies)
+	r.Post("/mcp/v1/tools/check-cost", policyHandler.CheckCost)
 
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.Port),

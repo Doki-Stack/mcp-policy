@@ -25,6 +25,13 @@ type fakeEngine struct {
 
 	getPoliciesResults []model.PolicyMatch
 	getPoliciesErr     error
+
+	costResp *model.CostCheckResponse
+	costErr  error
+}
+
+func (f *fakeEngine) CheckCost(ctx context.Context, req model.CostCheckRequest) (*model.CostCheckResponse, error) {
+	return f.costResp, f.costErr
 }
 
 func (f *fakeEngine) Evaluate(ctx context.Context, req model.EvaluateRequest) (*model.EvaluateResponse, error) {
@@ -66,7 +73,8 @@ func TestEvaluatePolicy_Success(t *testing.T) {
 		Constraints: []string{"no-public-s3: ..."},
 		Violations:  []model.Violation{},
 	}
-	h := NewPolicyHandler(&fakeEngine{resp: want}, testLogger(t))
+	fake := &fakeEngine{resp: want}
+	h := NewPolicyHandler(fake, fake, testLogger(t))
 
 	rec := doEvaluate(t, h, model.EvaluateRequest{
 		OrgID: "11111111-1111-1111-1111-111111111111",
@@ -86,7 +94,8 @@ func TestEvaluatePolicy_Success(t *testing.T) {
 }
 
 func TestEvaluatePolicy_FailClosed(t *testing.T) {
-	h := NewPolicyHandler(&fakeEngine{err: fmt.Errorf("%w: qdrant down", service.ErrFailClosed)}, testLogger(t))
+	fake := &fakeEngine{err: fmt.Errorf("%w: qdrant down", service.ErrFailClosed)}
+	h := NewPolicyHandler(fake, fake, testLogger(t))
 
 	rec := doEvaluate(t, h, model.EvaluateRequest{
 		OrgID: "11111111-1111-1111-1111-111111111111",
@@ -109,7 +118,8 @@ func TestEvaluatePolicy_FailClosed(t *testing.T) {
 }
 
 func TestEvaluatePolicy_InternalError(t *testing.T) {
-	h := NewPolicyHandler(&fakeEngine{err: fmt.Errorf("unexpected panic in re-ranker")}, testLogger(t))
+	fake := &fakeEngine{err: fmt.Errorf("unexpected panic in re-ranker")}
+	h := NewPolicyHandler(fake, fake, testLogger(t))
 
 	rec := doEvaluate(t, h, model.EvaluateRequest{
 		OrgID: "11111111-1111-1111-1111-111111111111",
@@ -122,7 +132,7 @@ func TestEvaluatePolicy_InternalError(t *testing.T) {
 }
 
 func TestEvaluatePolicy_MissingOrgID(t *testing.T) {
-	h := NewPolicyHandler(&fakeEngine{}, testLogger(t))
+	h := NewPolicyHandler(&fakeEngine{}, &fakeEngine{}, testLogger(t))
 
 	rec := doEvaluate(t, h, model.EvaluateRequest{Query: "query"})
 
@@ -132,7 +142,7 @@ func TestEvaluatePolicy_MissingOrgID(t *testing.T) {
 }
 
 func TestEvaluatePolicy_MissingQuery(t *testing.T) {
-	h := NewPolicyHandler(&fakeEngine{}, testLogger(t))
+	h := NewPolicyHandler(&fakeEngine{}, &fakeEngine{}, testLogger(t))
 
 	rec := doEvaluate(t, h, model.EvaluateRequest{OrgID: "11111111-1111-1111-1111-111111111111"})
 
@@ -142,7 +152,7 @@ func TestEvaluatePolicy_MissingQuery(t *testing.T) {
 }
 
 func TestEvaluatePolicy_MalformedJSON(t *testing.T) {
-	h := NewPolicyHandler(&fakeEngine{}, testLogger(t))
+	h := NewPolicyHandler(&fakeEngine{}, &fakeEngine{}, testLogger(t))
 
 	req := httptest.NewRequest(http.MethodPost, "/mcp/v1/tools/evaluate-policy", bytes.NewReader([]byte("{not json")))
 	rec := httptest.NewRecorder()

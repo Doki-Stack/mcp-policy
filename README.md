@@ -27,6 +27,7 @@ The Policy MCP is the guardrails layer of the platform. Before any infrastructur
 | `evaluate-policy` | Evaluate a proposed plan against all applicable policies |
 | `get-policies` | Retrieve policies matching a query (semantic search via Qdrant) |
 | `ingest-policy` | Ingest new policy documents into the vector store |
+| `check-cost` | Check an estimated cost against the org's configured budget for a resource type |
 
 ## Key Behaviors
 

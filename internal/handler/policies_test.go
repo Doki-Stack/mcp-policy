@@ -26,7 +26,7 @@ func doGetPolicies(t *testing.T, h *PolicyHandler, body interface{}) *httptest.R
 
 func TestGetPolicies_Success(t *testing.T) {
 	fake := &fakeEngine{getPoliciesResults: []model.PolicyMatch{{PolicyID: "p1", Title: "no-public-s3"}}}
-	h := NewPolicyHandler(fake, testLogger(t))
+	h := NewPolicyHandler(fake, fake, testLogger(t))
 
 	rec := doGetPolicies(t, h, model.GetPoliciesRequest{
 		OrgID: "11111111-1111-1111-1111-111111111111",
@@ -46,7 +46,7 @@ func TestGetPolicies_Success(t *testing.T) {
 }
 
 func TestGetPolicies_MissingOrgID(t *testing.T) {
-	h := NewPolicyHandler(&fakeEngine{}, testLogger(t))
+	h := NewPolicyHandler(&fakeEngine{}, &fakeEngine{}, testLogger(t))
 
 	rec := doGetPolicies(t, h, model.GetPoliciesRequest{Query: "s3 buckets"})
 
@@ -57,7 +57,7 @@ func TestGetPolicies_MissingOrgID(t *testing.T) {
 
 func TestGetPolicies_MissingQueryAndResourceType(t *testing.T) {
 	fake := &fakeEngine{getPoliciesErr: service.ErrMissingQuery}
-	h := NewPolicyHandler(fake, testLogger(t))
+	h := NewPolicyHandler(fake, fake, testLogger(t))
 
 	rec := doGetPolicies(t, h, model.GetPoliciesRequest{OrgID: "11111111-1111-1111-1111-111111111111"})
 
@@ -68,7 +68,7 @@ func TestGetPolicies_MissingQueryAndResourceType(t *testing.T) {
 
 func TestGetPolicies_FailClosed(t *testing.T) {
 	fake := &fakeEngine{getPoliciesErr: fmt.Errorf("%w: qdrant down", service.ErrFailClosed)}
-	h := NewPolicyHandler(fake, testLogger(t))
+	h := NewPolicyHandler(fake, fake, testLogger(t))
 
 	rec := doGetPolicies(t, h, model.GetPoliciesRequest{
 		OrgID: "11111111-1111-1111-1111-111111111111",
@@ -81,7 +81,7 @@ func TestGetPolicies_FailClosed(t *testing.T) {
 }
 
 func TestGetPolicies_MalformedJSON(t *testing.T) {
-	h := NewPolicyHandler(&fakeEngine{}, testLogger(t))
+	h := NewPolicyHandler(&fakeEngine{}, &fakeEngine{}, testLogger(t))
 
 	req := httptest.NewRequest(http.MethodPost, "/mcp/v1/tools/get-policies", bytes.NewReader([]byte("{not json")))
 	rec := httptest.NewRecorder()
