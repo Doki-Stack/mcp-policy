@@ -63,16 +63,33 @@ func run() error {
 	}
 	defer store.Close()
 
+	qdrantRepo, err := repository.NewQdrantRepo(repository.QdrantConfig{
+		URL:              cfg.QdrantURL,
+		APIKey:           cfg.QdrantAPIKey,
+		BreakerThreshold: cfg.CircuitBreakerThreshold,
+		BreakerTimeout:   cfg.CircuitBreakerTimeout(),
+	})
+	if err != nil {
+		return fmt.Errorf("connect qdrant: %w", err)
+	}
+	defer qdrantRepo.Close() //nolint:errcheck
+
+	if err := qdrantRepo.EnsureCollection(ctx); err != nil {
+		return fmt.Errorf("ensure qdrant collection: %w", err)
+	}
+
 	r := chi.NewRouter()
 	r.Use(chimw.RealIP)
 	r.Use(sharedmw.RequestID)
 	r.Use(sharedmw.Recovery(log))
 	r.Use(sharedmw.Logger(log))
 
-	// Mounts GET /healthz (liveness) and GET /readyz (readiness). More checks
-	// (Qdrant, embeddings) are added as those clients land in later tasks.
+	// Mounts GET /healthz (liveness) and GET /readyz (readiness). Both
+	// dependencies are fail-closed (ADR-005): readyz reports unhealthy if
+	// either is down, since evaluate-policy cannot function without them.
 	r.Mount("/", health.Handler(
 		health.NewCheck("postgres", store.Ping),
+		health.NewCheck("qdrant", qdrantRepo.Ping),
 	))
 
 	srv := &http.Server{
