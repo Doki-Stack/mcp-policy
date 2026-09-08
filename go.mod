@@ -3,10 +3,12 @@ module github.com/doki-stack/mcp-policy
 go 1.27.1
 
 require (
+	github.com/alicebob/miniredis/v2 v2.39.0
 	github.com/doki-stack/shared-go v0.0.0-20260310073048-5a91da838900
 	github.com/go-chi/chi/v5 v5.3.2
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/qdrant/go-client v1.19.2
+	github.com/redis/go-redis/v9 v9.22.0
 	github.com/sony/gobreaker/v2 v2.4.0
 	go.uber.org/zap v1.27.0
 )
@@ -43,6 +45,7 @@ require (
 	github.com/prometheus/common v0.59.1 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
+	github.com/yuin/gopher-lua v1.1.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel v1.44.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.32.0 // indirect
@@ -53,6 +56,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.44.0 // indirect
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
+	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
