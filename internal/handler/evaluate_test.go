@@ -22,6 +22,9 @@ type fakeEngine struct {
 
 	ingestResults []service.IngestResult
 	ingestErr     error
+
+	getPoliciesResults []model.PolicyMatch
+	getPoliciesErr     error
 }
 
 func (f *fakeEngine) Evaluate(ctx context.Context, req model.EvaluateRequest) (*model.EvaluateResponse, error) {
@@ -30,6 +33,10 @@ func (f *fakeEngine) Evaluate(ctx context.Context, req model.EvaluateRequest) (*
 
 func (f *fakeEngine) IngestPolicies(ctx context.Context, docs []model.IngestPolicyRequest) ([]service.IngestResult, error) {
 	return f.ingestResults, f.ingestErr
+}
+
+func (f *fakeEngine) GetPolicies(ctx context.Context, req model.GetPoliciesRequest) ([]model.PolicyMatch, error) {
+	return f.getPoliciesResults, f.getPoliciesErr
 }
 
 func testLogger(t *testing.T) *logger.Logger {

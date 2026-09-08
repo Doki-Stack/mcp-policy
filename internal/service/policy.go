@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/doki-stack/mcp-policy/internal/model"
@@ -17,6 +18,10 @@ import (
 // Embedding and Qdrant failures are fail-closed; cache failures are not
 // (see PolicyEngine.Evaluate).
 var ErrFailClosed = errors.New("policy evaluation unavailable")
+
+// ErrMissingQuery means a get-policies call gave neither a query nor a
+// resource_type to search on.
+var ErrMissingQuery = errors.New("query or resource_type is required")
 
 // TopKMatches is how many policies evaluate-policy returns after re-ranking.
 const TopKMatches = 5
@@ -92,6 +97,34 @@ func (e *PolicyEngine) Evaluate(ctx context.Context, req model.EvaluateRequest) 
 	}
 
 	return resp, nil
+}
+
+// GetPolicies implements the get-policies tool: plain semantic search, no
+// re-ranking and no caching (unlike Evaluate — this is a lookup tool, not
+// a policy decision). query and resource_type are folded into one
+// embedding query since the indexed payload has no separate resource_type
+// field to filter on.
+func (e *PolicyEngine) GetPolicies(ctx context.Context, req model.GetPoliciesRequest) ([]model.PolicyMatch, error) {
+	queryText := strings.TrimSpace(req.Query + " " + req.ResourceType)
+	if queryText == "" {
+		return nil, ErrMissingQuery
+	}
+
+	vector, err := e.embedder.Embed(ctx, queryText)
+	if err != nil {
+		return nil, fmt.Errorf("%w: embed query: %v", ErrFailClosed, err)
+	}
+
+	points, err := e.qdrant.Search(ctx, req.OrgID, vector, TopKMatches)
+	if err != nil {
+		return nil, fmt.Errorf("%w: search policies: %v", ErrFailClosed, err)
+	}
+
+	matches := make([]model.PolicyMatch, len(points))
+	for i, p := range points {
+		matches[i] = repository.PolicyFromPoint(p)
+	}
+	return matches, nil
 }
 
 // rerank reorders points by similarity score combined with a recency

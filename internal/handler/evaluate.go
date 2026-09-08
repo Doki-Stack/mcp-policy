@@ -21,6 +21,7 @@ import (
 type Engine interface {
 	Evaluate(ctx context.Context, req model.EvaluateRequest) (*model.EvaluateResponse, error)
 	IngestPolicies(ctx context.Context, docs []model.IngestPolicyRequest) ([]service.IngestResult, error)
+	GetPolicies(ctx context.Context, req model.GetPoliciesRequest) ([]model.PolicyMatch, error)
 }
 
 // PolicyHandler serves the Policy MCP's tool endpoints.
